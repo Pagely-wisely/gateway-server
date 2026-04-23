@@ -9,6 +9,67 @@ spring:
   profiles:
     active: dev
 
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            # AI Service
+            - id: ai-service
+              uri: http://localhost:19021
+              predicates:
+                - Path=/api/v1/ai/**
+
+            # User Service (유저 + 인증)
+            - id: user-service
+              uri: http://localhost:19001
+              predicates:
+                - Path=/api/v1/users/**, /api/v1/auth/**
+
+            # Market Service (마켓)
+            - id: market-service
+              order: 2
+              uri: http://localhost:19031
+              predicates:
+                - Path=/api/v1/sale-posts/**, /api/v1/orders/**, /api/v1/sellers/**, /api/v1/buyers/**
+
+            # Payment Service (결제 + Webhook + 구매자 결제내역)
+            - id: payment-service
+              order: 1  # 숫자가 낮을수록 우선순위가 높음 (buyers)
+              uri: http://localhost:19041
+              predicates:
+                - Path=/api/v1/payments/**, /api/v1/payment/webhook, /api/v1/buyers/me/payments
+
+            # Book Service (도서 조회/좋아요)
+            - id: book-service
+              uri: http://localhost:19051
+              predicates:
+                - Path=/api/v1/books/**
+
+            # Report Service (독후감)
+            - id: report-service
+              uri: http://localhost:19061
+              predicates:
+                - Path=/api/v1/reports/**
+
+            # Meeting Service (모임)
+            - id: meeting-service
+              uri: http://localhost:19011
+              predicates:
+                - Path=/api/v1/meetings/**
+
+            # Map Service (지도) : MVP 이후 수정
+            - id: map-service
+              uri: http://localhost:19071
+              predicates:
+                - Path=/api/v1/map/**
+
+            # Chat Service (모임 채팅 / 거래 채팅)  : MVP 이후 수정
+            - id: chat-service
+              uri: http://localhost:19081
+              predicates:
+                - Path=/api/v1/chat/**
+
 eureka:
   instance:
     prefer-ip-address: false
