@@ -1,3 +1,20 @@
+server:
+  port: 8080
+
 spring:
   application:
-    name: gatewayserver
+    name: gateway
+  config:
+    import: "optional:configserver:http://localhost:8888"
+  profiles:
+    active: dev
+
+eureka:
+  instance:
+    prefer-ip-address: false
+    hostname: ${HOSTNAME:localhost}
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8000/eureka/}
