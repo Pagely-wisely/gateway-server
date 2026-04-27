@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -36,10 +35,8 @@ public class JwtTokenProvider {
 
     private final SecretKey secretKey;
 
-    public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
-        // UTF-8 바이트로 변환하여 HMAC 키 생성
-        // 256비트 미만이면 jjwt 가 WeakKeyException 발생
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    public JwtTokenProvider(JwtProperties jwtProperties) {
+        this.secretKey = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
     }
 
     /**
