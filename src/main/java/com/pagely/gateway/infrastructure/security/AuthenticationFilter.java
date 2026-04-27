@@ -1,4 +1,4 @@
-package com.pagley.gateway.infrastructure.security;
+package com.pagely.gateway.infrastructure.security;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

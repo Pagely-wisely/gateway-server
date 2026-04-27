@@ -1,4 +1,4 @@
-package com.pagley.gateway;
+package com.pagely.gateway;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
