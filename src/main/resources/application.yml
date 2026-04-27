@@ -5,7 +5,9 @@ spring:
   application:
     name: gateway
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import:
+      - optional:configserver:http://localhost:8888
+      - optional:classpath:.env[.properties]
   profiles:
     active: dev
 
@@ -79,3 +81,13 @@ eureka:
     fetch-registry: true
     serviceUrl:
       defaultZone: ${EUREKA_SERVER_URL:http://localhost:8000/eureka/}
+
+
+jwt:
+  secret: ${JWT_SECRET}
+  # 생성 명령: openssl rand -base64 64
+  public-paths:
+    - /api/v1/users
+    - /api/v1/auth/**
+    - /actuator/**
+    - /api/v1/payment/webhook
