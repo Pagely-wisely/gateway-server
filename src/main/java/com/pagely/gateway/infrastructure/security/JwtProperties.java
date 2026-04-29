@@ -1,4 +1,4 @@
-package com.pagley.gateway.infrastructure.security;
+package com.pagely.gateway.infrastructure.security;
 
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;

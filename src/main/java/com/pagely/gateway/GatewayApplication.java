@@ -1,6 +1,6 @@
-package com.pagley.gateway;
+package com.pagely.gateway;
 
-import com.pagley.gateway.infrastructure.security.JwtProperties;
+import com.pagely.gateway.infrastructure.security.JwtProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
