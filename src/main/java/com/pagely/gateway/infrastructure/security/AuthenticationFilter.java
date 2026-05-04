@@ -56,10 +56,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
+        HttpMethod method = request.getMethod();
 
-        // [1] Public Path 매칭 → 인증 우회
-        if (isPublicPath(path)) {
-            log.debug("Public path 인증 우회: {}", path);
+        // [1] Public Path 매칭 / 회원가입 경로 (POST /users/) → 인증 우회
+        if (isPublicPath(path) ||
+                "/api/v1/users".equals(path) && HttpMethod.POST.equals(method)) {
             return chain.filter(exchange);
         }
 
