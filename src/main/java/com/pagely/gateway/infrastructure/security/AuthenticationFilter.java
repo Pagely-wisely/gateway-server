@@ -1,23 +1,18 @@
 package com.pagely.gateway.infrastructure.security;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pagely.gateway.domain.exception.BusinessException;
+import com.pagely.gateway.domain.exception.CommonErrorCode;
+import com.pagely.gateway.domain.exception.GatewayErrorCode;
 import io.jsonwebtoken.JwtException;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
-import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
@@ -49,41 +44,39 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtProperties jwtProperties;
-    private final ObjectMapper objectMapper;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
+        HttpMethod method = request.getMethod();
 
-        // [1] Public Path 매칭 → 인증 우회
-        if (isPublicPath(path)) {
-            log.debug("Public path 인증 우회: {}", path);
+        // [1] Public Path 매칭 / 회원가입 경로 (POST /users/) → 인증 우회
+        if (isPublicPath(path) ||
+                "/api/v1/users".equals(path) && HttpMethod.POST.equals(method)) {
             return chain.filter(exchange);
         }
 
         // [2] Authorization 헤더 추출
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || authHeader.isBlank()) {
-            return unauthorized(exchange, "MISSING_TOKEN", "인증 토큰이 필요합니다.");
+            return Mono.error(new BusinessException(CommonErrorCode.UNAUTHORIZED));
         }
 
         // [3] Bearer prefix 검증
         if (!authHeader.startsWith(BEARER_PREFIX)) {
-            return unauthorized(exchange, "INVALID_TOKEN_FORMAT",
-                    "Authorization 헤더는 'Bearer {token}' 형식이어야 합니다.");
+            return Mono.error(new BusinessException(GatewayErrorCode.INVALID_TOKEN_FORMAT));
         }
 
         String token = authHeader.substring(BEARER_PREFIX.length()).trim();
         if (token.isEmpty()) {
-            return unauthorized(exchange, "EMPTY_TOKEN", "토큰이 비어있습니다.");
+            return Mono.error(new BusinessException(GatewayErrorCode.EMPTY_TOKEN));
         }
 
         // [4] JWT 검증
         if (!jwtTokenProvider.validateToken(token)) {
-            return unauthorized(exchange, "INVALID_TOKEN",
-                    "토큰이 유효하지 않거나 만료되었습니다.");
+            return Mono.error(new BusinessException(GatewayErrorCode.INVALID_TOKEN));
         }
 
         // [5] 클레임 추출
@@ -92,7 +85,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             claims = jwtTokenProvider.parseClaims(token);
         } catch (JwtException | IllegalStateException e) {
             log.warn("JWT 파싱 실패 (검증은 통과): {}", e.getMessage());
-            return unauthorized(exchange, "INVALID_TOKEN", "토큰 정보를 읽을 수 없습니다.");
+            return Mono.error(new BusinessException(GatewayErrorCode.INVALID_TOKEN));
         }
 
         // [6] 헤더 주입 후 다음 필터로
@@ -101,8 +94,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 .header(HEADER_USER_ROLE, claims.role())
                 .build();
 
-        log.debug("인증 성공: userId={}, role={}, path={}",
-                claims.userId(), claims.role(), path);
+/*        log.debug("인증 성공: userId={}, role={}, path={}",
+                claims.userId(), claims.role(), path);*/
 
         return chain.filter(exchange.mutate().request(mutatedRequest).build());
     }
@@ -117,32 +110,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
         return publicPaths.stream()
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
-    }
-
-    /**
-     * 401 Unauthorized 응답 반환.
-     */
-    private Mono<Void> unauthorized(ServerWebExchange exchange, String error, String message) {
-        ServerHttpResponse response = exchange.getResponse();
-        response.setStatusCode(HttpStatus.UNAUTHORIZED);
-        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-
-        Map<String, Object> body = Map.of(
-                "error", error,
-                "message", message,
-                "timestamp", LocalDateTime.now().toString()
-        );
-
-        try {
-            byte[] bytes = objectMapper.writeValueAsBytes(body);
-            DataBuffer buffer = response.bufferFactory().wrap(bytes);
-            return response.writeWith(Mono.just(buffer));
-        } catch (JsonProcessingException e) {
-            log.error("401 응답 직렬화 실패", e);
-            DataBuffer fallback = response.bufferFactory()
-                    .wrap("{\"error\":\"INTERNAL_ERROR\"}".getBytes(StandardCharsets.UTF_8));
-            return response.writeWith(Mono.just(fallback));
-        }
     }
 
     /**
