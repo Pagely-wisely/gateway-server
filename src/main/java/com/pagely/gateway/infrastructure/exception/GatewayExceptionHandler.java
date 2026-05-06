@@ -26,7 +26,6 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
 
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
-        log.info("[GatewayExceptionHandler] 진입 - 예외: {}", ex.getMessage()); // 이 로그가 찍히는지 확인이 핵심입니다!
         ServerHttpResponse response = exchange.getResponse();
 
         if (response.isCommitted()) {
@@ -51,7 +50,6 @@ public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
 
         return response.writeWith(Mono.fromSupplier(() -> {
             try {
-                // 이 부분이 정확히 apiResponse 변수를 직렬화하는지 다시 확인!
                 byte[] bytes = objectMapper.writeValueAsBytes(apiResponse);
                 return response.bufferFactory().wrap(bytes);
             } catch (Exception e) {
