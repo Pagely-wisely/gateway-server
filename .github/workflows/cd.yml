@@ -72,6 +72,7 @@ jobs:
             docker run -d \
               --name gateway \
               -p 8080:8080 \
+              -e SPRING_PROFILES_ACTIVE=prod \
               --env-file .env \
               --restart always \
               ${{ secrets.DOCKER_USERNAME }}/gateway-service:latest
