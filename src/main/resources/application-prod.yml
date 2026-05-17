@@ -6,10 +6,10 @@ spring:
     name: gateway
   config:
     import:
-      - optional:configserver:http://localhost:8888
+      - optional:configserver:${CONFIG_SERVER_URL:http://pagely-config:8888}
       - optional:classpath:.env[.properties]
   profiles:
-    active: dev
+    active: prod
 
   cloud:
     gateway:
@@ -72,11 +72,6 @@ spring:
               predicates:
                 - Path=/api/v1/map/**
 
-            # Chat Service (모임 채팅 / 거래 채팅)  : MVP 이후 수정
-            - id: chat-service
-              uri: http://localhost:19081
-              predicates:
-                - Path=/api/v1/chat/**
 
 eureka:
   instance:
@@ -86,7 +81,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     serviceUrl:
-      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8000/eureka/}
+      defaultZone: ${EUREKA_SERVER_URL:http://pagely-eureka:8000/eureka/}
 
 
 jwt:
