@@ -8,8 +8,6 @@ spring:
     import:
       - optional:configserver:${CONFIG_SERVER_URL:http://pagely-config:8888}
       - optional:classpath:.env[.properties]
-  profiles:
-    active: prod
 
   cloud:
     gateway:
