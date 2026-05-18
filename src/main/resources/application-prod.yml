@@ -1,0 +1,93 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  config:
+    import:
+      - optional:configserver:${CONFIG_SERVER_URL:http://pagely-config:8888}
+      - optional:classpath:.env[.properties]
+  profiles:
+    active: prod
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            # Auth Service (19091)
+            - id: auth-service
+              uri: lb://authservice
+              predicates:
+                - Path=/api/v1/auth/**
+
+            # AI Service (19021)
+            - id: ai-service
+              uri: lb://aiservice
+              predicates:
+                - Path=/api/v1/ai/**
+
+            # User Service (19001)
+            - id: user-service
+              uri: lb://userservice
+              predicates:
+                - Path=/api/v1/users/**
+
+            # Market Service (19031)
+            - id: market-service
+              order: 2
+              uri: lb://marketservice
+              predicates:
+                - Path=/api/v1/sale-posts/**, /api/v1/orders/**, /api/v1/sellers/**, /api/v1/buyers/**
+
+            # Payment Service (19041 결제 + Webhook + 구매자 결제내역)
+            - id: payment-service
+              order: 1  # 숫자가 낮을수록 우선순위가 높음 (buyers)
+              uri: lb://paymentservice
+              predicates:
+                - Path=/api/v1/payments/**, /api/v1/payment/webhook, /api/v1/buyers/me/payments
+
+            # Book Service (19051)
+            - id: book-service
+              uri: lb://bookservice
+              predicates:
+                - Path=/api/v1/books/**
+
+            # Report Service (19061)
+            - id: report-service
+              uri: lb://reportservice
+              predicates:
+                - Path=/api/v1/reports/**
+
+            # Meeting Service (19011)
+            - id: meeting-service
+              uri: lb://meetingservice
+              predicates:
+                - Path=/api/v1/meetings/**
+
+            # Map Service (19071) : MVP 이후 수정
+            - id: map-service
+              uri: lb://mapservice
+              predicates:
+                - Path=/api/v1/map/**
+
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    hostname: ${HOSTNAME:localhost}
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: ${EUREKA_SERVER_URL:http://pagely-eureka:8000/eureka/}
+
+
+jwt:
+  secret: ${JWT_SECRET}
+  # 생성 명령: openssl rand -base64 64
+  public-paths:
+    - /api/v1/auth/**
+    - /actuator/**
+    - /api/v1/payment/webhook
